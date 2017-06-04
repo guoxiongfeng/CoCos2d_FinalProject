@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dict>
+  <key>name</key>
+  <string>郭雄锋</string>
+  <key>number</key>
+  <string>15331092</string>
+  <key>string1</key>  
+  <string>欢迎学习cocos2dx</string>  
+  <key>string2</key>  
+  <string>使用XML显示中文</string>  
+  <key>string3</key>  
+  <string>key与string标签中的内容是对应的</string> 
+</dict>
