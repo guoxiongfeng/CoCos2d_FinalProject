@@ -67,7 +67,10 @@ void Factory::removeMonster(Sprite* sp) {
 	Animate * ani = Animate::create(anim);
 	Sequence *seq = Sequence::create(ani, CallFunc::create(CC_CALLBACK_0(Sprite::removeFromParent, sp)), NULL);
 	sp->runAction(seq);
-	monster.eraseObject(sp);
+	if (monster.find(sp) != monster.end()) {
+		monster.eraseObject(sp);
+		HelloWorld::currentScore += 10;
+	}
 }
 //设置monster移动路径是控制难度的关键
 //暂时用简单的直线运动吧
@@ -107,13 +110,13 @@ bool Factory::DecreaseHP(Sprite * monster, bool bulletHit) {
 	if (bar->getActionByTag(MonsterIsDecreasingHp) != nullptr && !bulletHit) 
 		return false;
 
-	MonsterInfo *t = (MonsterInfo *)monster->getUserData();
+	MonsterInfo * t = (MonsterInfo *)monster->getUserData();
 	t->hp--;
 	//这里用不用动画是一个问题。
 	auto process = ProgressFromTo::create(0.3f, bar->getPercentage(), bar->getPercentage() -  100 / t->maxHp);
 	process->setTag(MonsterIsDecreasingHp);
 	bar->runAction(process);
-	if (t->hp <= 0) {
+	if (monster->getUserData() != nullptr && ((MonsterInfo *)monster->getUserData())->hp <= 0) {
 		Factory::getInstance()->removeMonster(monster);
 		return true;
 	}

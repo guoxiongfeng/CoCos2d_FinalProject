@@ -55,6 +55,7 @@ bool HelloWorld::init()
 	schedule(schedule_selector(HelloWorld::update), 0.01f, kRepeatForever, 0.1f); //physic world
 	schedule(schedule_selector(HelloWorld::hitByMonster), 0.02f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::detactKeyboardEvent), 0.02f, CC_REPEAT_FOREVER,0);
+	//Monster要越来越多才好， 符合游戏规律:) 
 	schedule(schedule_selector(HelloWorld::createMonster), 0.3f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::moveMonster), 0.02f, CC_REPEAT_FOREVER, 0);
 
@@ -90,7 +91,8 @@ bool HelloWorld::onConcactBegin(PhysicsContact & contact) {
 
 	bullet->removeFromParent();//此处应有动画。
 	if (Factory::getInstance()->DecreaseHP(monster, true)) {
-		currentScore += 10;
+		//这样可能会多次增加分数
+		//currentScore += 10;
 		setText();
 	}
 	return true; //可以试试false
@@ -190,6 +192,8 @@ void HelloWorld::setText() {
 	if (k < currentScore)
 		database->setIntegerForKey("Number", currentScore);
 	time->setString("Score: " + std::to_string(currentScore));
+	if (currentScore % 1000 == 0)
+		UpdateValidTower();
 }
 void HelloWorld::Move(Vec2 direction) {
 	if (!CheckAnimation()) return;
@@ -230,17 +234,11 @@ std::string HelloWorld::setLabelText(int k) {
 }
 
 void HelloWorld::createMonster(float dt) {
-	/*
-	static int t = 180;
-	time->setString(std::to_string(t));
-	--t;
-	*/
-	
+
 	Factory::getInstance()->moveMonster(player->getPosition(), 0.5f);
 	if (RandomHelper::random_int(0, 20) < 18) return;
 	auto monster = Factory::getInstance()->createMonster();
-	//monster->setPosition(RandomHelper::random_real(0.0f, visibleSize.width), RandomHelper::random_real(0.0f, visibleSize.height));
-	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(0.0f, visibleSize.height));
+	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(30.0f, visibleSize.height - 30));
 	this->addChild(monster, 3);
 }
 
@@ -252,14 +250,14 @@ void HelloWorld::InitialScene() {
 	//set score
 	time = Label::create("Score: 0", "arial", 36);
 	time->setPosition(visibleSize.width / 2, visibleSize.height - 60);
-	setText();
+	
 	this->addChild(time, 3);
 
 	// show valid tower number.
 	validTowerNum = Label::create("Valid Tower: " + std::to_string(LIMITTOWERNUM), "arial", 20);
 	validTowerNum->setPosition(visibleSize.width / 5 * 4, visibleSize.height - 60);
 	this->addChild(validTowerNum, 3);
-
+	setText();
 	//set home
 	home = Sprite::create();
 	home->setContentSize(Size(10, visibleSize.height));
