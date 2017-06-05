@@ -11,6 +11,8 @@ public:
 
     virtual bool init();
 
+	void SlowHeal(float dt);
+
 	void addContactListener();
 
 	bool onConcactBegin(PhysicsContact & contact);

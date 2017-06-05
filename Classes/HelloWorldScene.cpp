@@ -51,6 +51,8 @@ bool HelloWorld::init()
 	setEvent();
 	addTouchListener();
 	addContactListener();
+	//»ºÂý»Ö¸´playerÒÔ¼°homeµÄÑªÁ¿
+	schedule(schedule_selector(HelloWorld::SlowHeal), 8.0f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::TowerAttack), 0.5f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::update), 0.01f, kRepeatForever, 0.1f); //physic world
 	schedule(schedule_selector(HelloWorld::hitByMonster), 0.02f, CC_REPEAT_FOREVER, 0);
@@ -63,8 +65,14 @@ bool HelloWorld::init()
 	
 	return true;
 }
-
-
+//Undebuged Module.
+void HelloWorld::SlowHeal(float dt) {
+	auto homeHeal = ProgressFromTo::create(0.5, pT->getPercentage(), pT->getPercentage() + 1);
+	pT->runAction(homeHeal);
+	auto temp = (ProgressTimer *)player->getChildByTag(BloodBar);
+	auto playerHeal = ProgressFromTo::create(0.5, temp->getPercentage(), temp->getPercentage() + 1);
+	temp->runAction(playerHeal);
+}
 
 void HelloWorld::addContactListener() {
 	auto contactListener = EventListenerPhysicsContact::create();
@@ -414,7 +422,7 @@ void HelloWorld::hitByMonster(float dt) {
 		Sprite *collision = fac->collider(player->getBoundingBox());
 		if (collision != NULL) {
 			//fac->removeMonster(collision);
-			playerDecreaseBlood(10);//
+			playerDecreaseBlood(10);//Íæ¼ÒµôµÄÑªÁ¿¡£
 		}
 	}
 
@@ -442,6 +450,8 @@ void HelloWorld::GameOver() {
 	SimpleAudioEngine::getInstance()->playEffect("gameover.mp3", false);
 	*/
 	Factory::getInstance()->removeAllMonster();
+	TowerFactory::getInstance()->removeAllTower();
+	HelloWorld::currentScore = 0;
 	auto label1 = Label::createWithTTF("·ÀÊØÊ§°Ü2333", "fonts/STXINWEI.TTF", 60);
 	label1->setColor(Color3B(0, 0, 0));
 	label1->setPosition(visibleSize.width / 2, visibleSize.height / 2);
