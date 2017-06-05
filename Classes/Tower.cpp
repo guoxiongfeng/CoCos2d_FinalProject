@@ -2,12 +2,13 @@
 #include "Monster.h"
 #define HIT 50
 #define BULLET -2
+#define BULLET_LIMIT 2
 USING_NS_CC;
 TowerFactory* TowerFactory::factory = NULL;
 
 
 TowerFactory::TowerFactory() {
-	attackRadius = 500.0f;
+	attackRadius = 300.0f;
 }
 
 TowerFactory* TowerFactory::getInstance() {
@@ -20,6 +21,7 @@ TowerFactory* TowerFactory::getInstance() {
 Sprite * TowerFactory::createTower()
 {
 	Sprite* tow = Sprite::create("tempTower.png", CC_RECT_PIXELS_TO_POINTS(Rect(0, 0, 64, 64)));
+	tow->setAnchorPoint(Vec2(0.5, 0.5));
 	//tow->setScaleX(0.05);
 	//tow->setScaleY(0.05);
 	tower.pushBack(tow);
@@ -30,6 +32,8 @@ void TowerFactory::Attack()
 {
 	auto monsters = Factory::getInstance()->monster;
 	for (auto it = tower.begin(); it != tower.end(); ++it) {
+		int temp = (*it)->getChildrenCount();
+		if ((*it)->getChildren().size() >= BULLET_LIMIT) continue;
 		double minDisSqr = 1000000; Sprite* nearest = nullptr;
 		for (auto mons = monsters.begin(); mons != monsters.end(); ++mons) {
 			if ((*it)->getPosition().getDistanceSq((*mons)->getPosition()) < minDisSqr) {
@@ -39,8 +43,11 @@ void TowerFactory::Attack()
 		}
 		if ( nearest != nullptr && (*it)->getPosition().getDistanceSq(nearest->getPosition()) < TowerFactory::attackRadius * TowerFactory::attackRadius) {
 			//小于攻击半径， 打。
-			auto bullet = createBullet((*it)->getPosition(), nearest->getPosition(), 400);
-			Director::getInstance()->getRunningScene()->addChild(bullet);
+			auto bullet = createBullet((*it)->getPosition(),  nearest->getPosition() + nearest->getContentSize() / 2, 400);
+			bullet->setPosition((*it)->getContentSize() / 2);
+			bullet->setTag(BULLET);
+			//Director::getInstance()->getRunningScene()->addChild(bullet);
+			(*it)->addChild(bullet);
 		}
 	}
 }
@@ -50,7 +57,10 @@ Sprite* TowerFactory::createBullet(Vec2 currentPos, Vec2 dstPos, double speed = 
 	Sprite* bullet = Sprite::create("bullet.png", CC_RECT_PIXELS_TO_POINTS(Rect(0, 0,73, 74)));
 	bullet->setScaleX(0.25);
 	bullet->setScaleY(0.25);
-	bullet->setPosition(currentPos);
+	//bullet->setPosition(currentPos);
+	dstPos -= currentPos;
+	bullet->setPosition(Vec2(0.5, 0.5));
+	bullet->setAnchorPoint(Vec2(0.5, 0.5));
 	bullet->setName("bullet");
 
 	PhysicsBody* rigidbody = PhysicsBody::createBox(bullet->getContentSize());
@@ -64,9 +74,9 @@ Sprite* TowerFactory::createBullet(Vec2 currentPos, Vec2 dstPos, double speed = 
 
 
 
-	auto dist = currentPos.getDistance(dstPos);
-	// t = s / v;
-	auto hit = Sequence::create(MoveTo::create(dist / speed, dstPos), CallFunc::create(CC_CALLBACK_0(Sprite::removeFromParent, bullet)),nullptr);
+	auto dist = Vec2::ZERO.getDistance(dstPos);
+	// t = s / v; 1.02弥补刚好够不到的不足。
+	auto hit = Sequence::create(MoveTo::create(dist / speed, dstPos * 1.0), CallFunc::create(CC_CALLBACK_0(Sprite::removeFromParent, bullet)),nullptr);
 	hit->setTag(HIT);
 	bullet->runAction(hit);
 	return bullet;

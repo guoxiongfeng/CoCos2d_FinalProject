@@ -28,6 +28,7 @@ void Factory::initSpriteFrame(){
 
 Sprite* Factory::createMonster() {
 	Sprite* mons = Sprite::create("Monster.png", CC_RECT_PIXELS_TO_POINTS(Rect(364,0,42,42)));
+	mons->setAnchorPoint(Vec2(0.5, 0.5));
 	mons->setName("monster");
 	
 	PhysicsBody* rigidbody = PhysicsBody::createBox(mons->getContentSize());
@@ -112,14 +113,14 @@ bool Factory::DecreaseHP(Sprite * monster, bool bulletHit) {
 
 	MonsterInfo * t = (MonsterInfo *)monster->getUserData();
 	t->hp--;
-	//这里用不用动画是一个问题。
+	//这里用不用动画是一个问题。 减血迅速的时候有问题。
 	ProgressFromTo * process = nullptr;
 	if (bulletHit)
 		//bullet击中，每次减1
-		process = ProgressFromTo::create(0.3f, bar->getPercentage(), bar->getPercentage() -  100 / t->maxHp);
+		process = ProgressFromTo::create(0.02f, bar->getPercentage(), bar->getPercentage() -  100 / t->maxHp);
 	else 
 		//人击中， 当然要比较厉害。 每次固定15% 伤害。（而且我这种写法是范围群伤。
-		process = ProgressFromTo::create(0.3f, bar->getPercentage(), bar->getPercentage() - 15);
+		process = ProgressFromTo::create(0.02f, bar->getPercentage(), bar->getPercentage() - 15);
 	process->setTag(MonsterIsDecreasingHp);
 	bar->runAction(process);
 	if (monster->getUserData() != nullptr && ((MonsterInfo *)monster->getUserData())->hp <= 0) {

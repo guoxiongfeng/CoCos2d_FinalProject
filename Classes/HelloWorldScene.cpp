@@ -7,8 +7,8 @@
 #define MOVE 10
 #define BloodBar -30000
 #define PlayerIsDecreasingHp -30002
-#define MONSTER_DAMAGE 40
-#define REVIVETIME 6
+#define MONSTER_DAMAGE 5
+#define REVIVETIME 20
 #define LIMITTOWERNUM 5 + HelloWorld::currentScore / 1000
 #pragma execution_character_set("utf-8")
 USING_NS_CC;
@@ -55,7 +55,7 @@ bool HelloWorld::init()
 	addContactListener();
 	//缓慢恢复player以及home的血量
 	schedule(schedule_selector(HelloWorld::SlowHeal), 8.0f, CC_REPEAT_FOREVER, 0);
-	schedule(schedule_selector(HelloWorld::TowerAttack), 0.5f, CC_REPEAT_FOREVER, 0);
+	schedule(schedule_selector(HelloWorld::TowerAttack), 0.02f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::update), 0.01f, kRepeatForever, 0.1f); //physic world
 	schedule(schedule_selector(HelloWorld::hitByMonster), 0.02f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::detactKeyboardEvent), 0.02f, CC_REPEAT_FOREVER,0);
@@ -486,7 +486,8 @@ void HelloWorld::GameOver() {
 	unschedule(schedule_selector(HelloWorld::detactKeyboardEvent));
 	unschedule(schedule_selector(HelloWorld::createMonster));
 	unschedule(schedule_selector(HelloWorld::moveMonster));
-	
+	unschedule(schedule_selector(HelloWorld::Reviving));
+	unschedule(schedule_selector(HelloWorld::SlowHeal));
 	/*
 	SimpleAudioEngine::getInstance()->stopBackgroundMusic("bgm.mp3");
 	SimpleAudioEngine::getInstance()->playEffect("gameover.mp3", false);
