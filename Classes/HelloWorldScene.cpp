@@ -7,6 +7,8 @@
 #define MOVE 10
 #define BloodBar -30000
 #define PlayerIsDecreasingHp -30002
+#define MONSTER_DAMAGE 40
+#define REVIVETIME 6
 #define LIMITTOWERNUM 5 + HelloWorld::currentScore / 1000
 #pragma execution_character_set("utf-8")
 USING_NS_CC;
@@ -60,6 +62,7 @@ bool HelloWorld::init()
 	//Monster要越来越多才好， 符合游戏规律:) 
 	schedule(schedule_selector(HelloWorld::createMonster), 0.3f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::moveMonster), 0.02f, CC_REPEAT_FOREVER, 0);
+	
 
 
 	
@@ -72,6 +75,8 @@ void HelloWorld::SlowHeal(float dt) {
 	auto temp = (ProgressTimer *)player->getChildByTag(BloodBar);
 	auto playerHeal = ProgressFromTo::create(0.5, temp->getPercentage(), temp->getPercentage() + 1);
 	temp->runAction(playerHeal);
+
+	
 }
 
 void HelloWorld::addContactListener() {
@@ -178,6 +183,32 @@ void HelloWorld::Dead() {
 	together->setTag(DEAD);
 	
 	player->runAction(together);
+
+	schedule(schedule_selector(HelloWorld::Reviving), 1.0f, CC_REPEAT_FOREVER, 0);
+	reviveTime->setVisible(true);
+}
+
+void HelloWorld::Reviving(float dt) {
+	static int restTime = REVIVETIME; //
+	if (restTime > 0) {
+		restTime--;
+		reviveTime->setString("Reviving CD: " + std::to_string(restTime) + "s");
+	}
+	else {
+		restTime = REVIVETIME;
+		//revive player
+		Revive(visibleSize / 2);
+		reviveTime->setVisible(false);
+		unschedule(schedule_selector(HelloWorld::Reviving));
+	}
+}
+
+//此处可加特效
+void HelloWorld::Revive(Vec2 pos) {
+	player->setPosition(pos);
+	player->setVisible(true);
+	ProgressTimer* bloodBar = (ProgressTimer*) player->getChildByTag(BloodBar);
+	bloodBar->setPercentage(100);
 }
 
 void HelloWorld::DisablePlayer() {
@@ -200,7 +231,7 @@ void HelloWorld::setText() {
 	if (k < currentScore)
 		database->setIntegerForKey("Number", currentScore);
 	time->setString("Score: " + std::to_string(currentScore));
-	if (currentScore % 1000 == 0)
+	//if (currentScore % 1000 == 0)
 		UpdateValidTower();
 }
 void HelloWorld::Move(Vec2 direction) {
@@ -244,7 +275,7 @@ std::string HelloWorld::setLabelText(int k) {
 void HelloWorld::createMonster(float dt) {
 
 	Factory::getInstance()->moveMonster(player->getPosition(), 0.5f);
-	if (RandomHelper::random_int(0, 20) < 18) return;
+	if (RandomHelper::random_int(0, 20) < 18 - currentScore / 250) return; //随着score增加出现monster更快。
 	auto monster = Factory::getInstance()->createMonster();
 	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(30.0f, visibleSize.height - 30));
 	this->addChild(monster, 3);
@@ -259,13 +290,20 @@ void HelloWorld::InitialScene() {
 	time = Label::create("Score: 0", "arial", 36);
 	time->setPosition(visibleSize.width / 2, visibleSize.height - 60);
 	
-	this->addChild(time, 3);
+	this->addChild(time, 120);
 
 	// show valid tower number.
 	validTowerNum = Label::create("Valid Tower: " + std::to_string(LIMITTOWERNUM), "arial", 20);
 	validTowerNum->setPosition(visibleSize.width / 5 * 4, visibleSize.height - 60);
-	this->addChild(validTowerNum, 3);
+	this->addChild(validTowerNum, 120);
 	setText();
+
+	// 设置复活时间显示（不处于死亡状态不显示
+	reviveTime = Label::create("Reviving CD: 0s", "arial", 20);
+	reviveTime->setPosition(visibleSize.width / 2, visibleSize.height - 90);
+	reviveTime->setVisible(false);
+	this->addChild(reviveTime, 120);
+
 	//set home
 	home = Sprite::create();
 	home->setContentSize(Size(10, visibleSize.height));
@@ -290,9 +328,10 @@ void HelloWorld::InitialScene() {
 	temppT->setTag(BloodBar);
 	player->addChild(temppT, 1);
 
-
-
 	addChild(player, 10);
+
+
+
 	Node * Labels[6];
 	MenuItemLabel * MenuLabels[6];
 	Vec2 LabelPosition[6] = { Vec2(20 ,40), Vec2(60 ,40), Vec2(100 ,40), Vec2(60 ,80), 
@@ -311,6 +350,9 @@ void HelloWorld::InitialScene() {
 	menu->setPosition(Vec2::ZERO);
 	this->addChild(menu, 4);
 }
+
+
+//设置地图。 地图需要更换。
 void HelloWorld::setMap() {
 	TMXTiledMap * tmx = TMXTiledMap::create("map.tmx");
 	tmx->setPosition(visibleSize.width / 2, visibleSize.height / 2);
@@ -407,11 +449,11 @@ void HelloWorld::hitByMonster(float dt) {
 		if (collision != NULL) {
 			if (Factory::getInstance()->DecreaseHP(collision, false)) {
 				auto temppT = (ProgressTimer *)player->getChildByTag(BloodBar);
-				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + 1);
+				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + 2); //玩家回复。
 				temppT->runAction(process);
 				/*
 				*/
-				currentScore += 10;
+				currentScore += 100;
 				setText();
 			}
 			//else do nothing.
@@ -422,7 +464,7 @@ void HelloWorld::hitByMonster(float dt) {
 		Sprite *collision = fac->collider(player->getBoundingBox());
 		if (collision != NULL) {
 			//fac->removeMonster(collision);
-			playerDecreaseBlood(10);//玩家掉的血量。
+			playerDecreaseBlood(MONSTER_DAMAGE);//玩家掉的血量。
 		}
 	}
 

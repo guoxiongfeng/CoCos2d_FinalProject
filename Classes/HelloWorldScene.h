@@ -31,6 +31,10 @@ public:
 
 	void Dead();
 
+	void Reviving(float dt);
+
+	void Revive(Vec2 pos);
+
 	void DisablePlayer();
 
 	void Attack();
@@ -94,6 +98,7 @@ private:
 	cocos2d::Vec2 origin;
 	cocos2d::Label* time;
 	cocos2d::Label* validTowerNum;
+	cocos2d::Label* reviveTime;
 	int dtime;
 	cocos2d::ProgressTimer* pT;
 	bool isPressed[4];
