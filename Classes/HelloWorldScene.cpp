@@ -5,6 +5,7 @@
 #define DEAD 18
 #define ATTACK 36
 #define MOVE 10
+#define CHANGING_POS 15
 #define BloodBar -30000
 #define PlayerIsDecreasingHp -30002
 #define MONSTER_DAMAGE 5
@@ -159,8 +160,6 @@ void HelloWorld::Jump() {
 bool HelloWorld::CheckAnimation() {
 	auto t = player->getActionByTag(DEAD);
 	if (t != NULL) return false;
-	t = player->getActionByTag(MOVE);
-	if (t != NULL) player->getActionManager()->removeAction(t);
 	return true;
 }
 Sequence* HelloWorld::addStatic(Animate * t) {
@@ -238,17 +237,20 @@ void HelloWorld::Move(Vec2 direction) {
 	if (!CheckAnimation()) return;
 	if (player->getActionByTag(ATTACK)!= NULL) return;
 	auto runAnimation = Animation::createWithSpriteFrames(run, 0.05f);
-	auto runAnimate = Animate::create(runAnimation);
-	runAnimate->setTag(MOVE);
-	Vec2 newPosition = player->getPosition() + direction;
-	
+	if (player->getActionByTag(MOVE) == nullptr) {
+		auto runAnimate = RepeatForever::create(Animate::create(runAnimation));
+		player->runAction(runAnimate);
+		runAnimate->setTag(MOVE);
+	}
 
+	Vec2 newPosition = player->getPosition() + direction;
 	if (isValid(player->getPosition(), direction)) {
 		auto action = MoveTo::create(0.4f, newPosition);
+		action->setTag(CHANGING_POS);
 		player->runAction(action);
 	}
 	
-	player->runAction(runAnimate);
+	
 	//isAnimateExcuting = true;
 }
 
@@ -363,7 +365,7 @@ void HelloWorld::setMap() {
 
 
 
-
+//动画资源找到了切割就放这里
 void HelloWorld::AnimationInit() {
 
 
@@ -402,8 +404,10 @@ void HelloWorld::AnimationInit() {
 		auto frame = SpriteFrame::createWithTexture(texture3, CC_RECT_PIXELS_TO_POINTS(Rect(68 * i, 0, 68, 101)));
 		run.pushBack(frame);
 	}
+	/*
 	auto frame4 = SpriteFrame::createWithTexture(texture, CC_RECT_PIXELS_TO_POINTS(Rect(0, 0, 68, 101)));
 	run.pushBack(frame4);
+	*/
 }
 
 void HelloWorld::SetProgressBar() {
@@ -606,5 +610,7 @@ void HelloWorld::onKeyPressed(EventKeyboard::KeyCode code, Event* event) {
 }
 
 void HelloWorld::onKeyReleased(EventKeyboard::KeyCode code, Event* event) {
+	player->stopActionByTag(CHANGING_POS);
+	player->stopActionByTag(MOVE);
 	pressTable[code] = false;
 }
