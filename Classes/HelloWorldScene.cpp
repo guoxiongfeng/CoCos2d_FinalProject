@@ -1,7 +1,7 @@
 #include "HelloWorldScene.h"
 #include "Monster.h"
 #include "Tower.h"
-
+#include "SimpleAudioEngine.h"
 #define PLAYER 1
 
 #define JUMP 99
@@ -13,20 +13,20 @@
 #define PlayerIsDecreasingHp -30002
 #define MONSTER_DAMAGE 5
 #define REVIVETIME 20
-/*测试用， 正式需修改*/
-#define COLD_TIME_0 3
-#define COLD_TIME_1 3
-#define COLD_TIME_2 3
+/*测试用， 正式需修改  测试时CD全为3即可*/
+#define COLD_TIME_0 5
+#define COLD_TIME_1 10
+#define COLD_TIME_2 15
 #define COLD_TIME_3 3
 
 
 #define LEVEL_3_SKILL_TIME 5
-#define LEVEL_4_SKILL_TIME 5
+#define LEVEL_4_SKILL_TIME 7
 #define LIMITTOWERNUM 5 + HelloWorld::currentScore / 500
 #define PLAYER_LEVEL 1 + (int)floor(sqrt(HelloWorld::currentScore / 300))
 #pragma execution_character_set("utf-8")
 USING_NS_CC;
-
+using namespace CocosDenshion;
 int HelloWorld::currentScore = 0;
 bool HelloWorld::Level_5_Skill_On = false;
 Scene* HelloWorld::createScene()
@@ -75,12 +75,12 @@ bool HelloWorld::init()
 	schedule(schedule_selector(HelloWorld::hitByMonster), 0.02f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::detactKeyboardEvent), 0.02f, CC_REPEAT_FOREVER,0);
 	//Monster要越来越多才好， 符合游戏规律:) 
-	schedule(schedule_selector(HelloWorld::createMonster), 0.3f, CC_REPEAT_FOREVER, 0);
+	schedule(schedule_selector(HelloWorld::createMonster), 0.4f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::moveMonster), 0.02f, CC_REPEAT_FOREVER, 0);
 	
 
 
-	
+	SimpleAudioEngine::getInstance()->playBackgroundMusic("music/bgm.mp3", true);
 	return true;
 }
 //Undebuged Module.
@@ -298,7 +298,7 @@ std::string HelloWorld::setLabelText(int k) {
 void HelloWorld::createMonster(float dt) {
 
 	Factory::getInstance()->moveMonster(player->getPosition(), 0.5f);
-	if (RandomHelper::random_int(0, 20) < 18 - currentScore / 250) return; //随着score增加出现monster更快。
+	if (RandomHelper::random_int(0, 20) < 18 - currentScore / 300) return; //随着score增加出现monster更快。
 	auto monster = Factory::getInstance()->createMonster();
 	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(80.0f, visibleSize.height - 80));
 	this->addChild(monster, 3);
@@ -309,6 +309,9 @@ void HelloWorld::moveMonster(float dt) {
 }
 
 void HelloWorld::InitialScene() {
+	auto audio = SimpleAudioEngine::getInstance();
+	audio->preloadBackgroundMusic("music/bgm.mp3");
+	audio->preloadBackgroundMusic("music/fail.mp3");
 	//set Parameter
 	attackOfPlayer = 10;
 	resumeFromAttack = 2;
@@ -544,7 +547,8 @@ void HelloWorld::playerDecreaseBlood(int amount) {
 
 
 void HelloWorld::GameOver() {
-
+	SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+	SimpleAudioEngine::getInstance()->playBackgroundMusic("music/fail.mp3", false);
 	unschedule(schedule_selector(HelloWorld::hitByMonster));
 	unschedule(schedule_selector(HelloWorld::detactKeyboardEvent));
 	unschedule(schedule_selector(HelloWorld::createMonster));
