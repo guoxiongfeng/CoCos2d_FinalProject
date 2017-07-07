@@ -41,6 +41,8 @@ public:
 
 	void setText();
 
+	void UpdatePlayerLevel();
+
 	void Move(Vec2 direction);
 	bool isValid(Vec2 t, Vec2 by);
 	//static void OnMoveFinished();
@@ -63,6 +65,8 @@ public:
 
 	void SetProgressBar();
 
+	bool contactWithTower();
+
 	void hitByMonster(float dt);
 
 	void playerDecreaseBlood(int amount);
@@ -83,6 +87,21 @@ public:
 
 	void onKeyReleased(EventKeyboard::KeyCode code, Event * event);
 
+	void Level_2_Skill();
+
+	void Level_3_Skill();
+
+	void Level3Effect(float dt);
+
+	void Level_4_Skill();
+
+	void Level4Effect(float dt);
+
+	void Level_5_Skill();
+
+	void UpdateColdTime(float dt);
+
+	static bool Level_5_Skill_On;
 	static int currentScore;
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
@@ -98,12 +117,17 @@ private:
 	cocos2d::Vec2 origin;
 	cocos2d::Label* time;
 	cocos2d::Label* validTowerNum;
+	cocos2d::Label* PlayerLevel;
 	cocos2d::Label* reviveTime;
+	cocos2d::Sprite* skill_icon[5];
+	cocos2d::Sprite* skill_show[4];
 	int dtime;
+	int attackOfPlayer;
+	int resumeFromAttack;
 	cocos2d::ProgressTimer* pT;
 	bool isPressed[4];
 	std::map<EventKeyboard::KeyCode, bool> pressTable;
-
+	int skillColding[4]; //技能剩余冷却时间
 	PhysicsWorld* world;
 };
 #endif // __HELLOWORLD_SCENE_H__

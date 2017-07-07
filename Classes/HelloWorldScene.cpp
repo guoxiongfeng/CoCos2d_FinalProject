@@ -1,6 +1,9 @@
 #include "HelloWorldScene.h"
 #include "Monster.h"
 #include "Tower.h"
+
+#define PLAYER 1
+
 #define JUMP 99
 #define DEAD 18
 #define ATTACK 36
@@ -10,12 +13,22 @@
 #define PlayerIsDecreasingHp -30002
 #define MONSTER_DAMAGE 5
 #define REVIVETIME 20
-#define LIMITTOWERNUM 5 + HelloWorld::currentScore / 1000
+/*测试用， 正式需修改*/
+#define COLD_TIME_0 3
+#define COLD_TIME_1 3
+#define COLD_TIME_2 3
+#define COLD_TIME_3 3
+
+
+#define LEVEL_3_SKILL_TIME 5
+#define LEVEL_4_SKILL_TIME 5
+#define LIMITTOWERNUM 5 + HelloWorld::currentScore / 500
+#define PLAYER_LEVEL 1 + (int)floor(sqrt(HelloWorld::currentScore / 300))
 #pragma execution_character_set("utf-8")
 USING_NS_CC;
 
 int HelloWorld::currentScore = 0;
-
+bool HelloWorld::Level_5_Skill_On = false;
 Scene* HelloWorld::createScene()
 {
     auto scene = Scene::createWithPhysics();
@@ -56,6 +69,7 @@ bool HelloWorld::init()
 	addContactListener();
 	//缓慢恢复player以及home的血量
 	schedule(schedule_selector(HelloWorld::SlowHeal), 8.0f, CC_REPEAT_FOREVER, 0);
+	schedule(schedule_selector(HelloWorld::UpdateColdTime), 1.0f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::TowerAttack), 0.02f, CC_REPEAT_FOREVER, 0);
 	schedule(schedule_selector(HelloWorld::update), 0.01f, kRepeatForever, 0.1f); //physic world
 	schedule(schedule_selector(HelloWorld::hitByMonster), 0.02f, CC_REPEAT_FOREVER, 0);
@@ -185,6 +199,7 @@ void HelloWorld::Dead() {
 
 	schedule(schedule_selector(HelloWorld::Reviving), 1.0f, CC_REPEAT_FOREVER, 0);
 	reviveTime->setVisible(true);
+	HelloWorld::Level_5_Skill_On = false;
 }
 
 void HelloWorld::Reviving(float dt) {
@@ -232,7 +247,13 @@ void HelloWorld::setText() {
 	time->setString("Score: " + std::to_string(currentScore));
 	//if (currentScore % 1000 == 0)
 		UpdateValidTower();
+		UpdatePlayerLevel();
 }
+
+void HelloWorld::UpdatePlayerLevel() {
+	PlayerLevel->setString("Player Level: " + std::to_string(PLAYER_LEVEL));
+}
+
 void HelloWorld::Move(Vec2 direction) {
 	if (!CheckAnimation()) return;
 	if (player->getActionByTag(ATTACK)!= NULL) return;
@@ -279,7 +300,7 @@ void HelloWorld::createMonster(float dt) {
 	Factory::getInstance()->moveMonster(player->getPosition(), 0.5f);
 	if (RandomHelper::random_int(0, 20) < 18 - currentScore / 250) return; //随着score增加出现monster更快。
 	auto monster = Factory::getInstance()->createMonster();
-	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(30.0f, visibleSize.height - 30));
+	monster->setPosition(visibleSize.width + RandomHelper::random_real(0.0f, 10.0f), RandomHelper::random_real(80.0f, visibleSize.height - 80));
 	this->addChild(monster, 3);
 }
 
@@ -288,6 +309,9 @@ void HelloWorld::moveMonster(float dt) {
 }
 
 void HelloWorld::InitialScene() {
+	//set Parameter
+	attackOfPlayer = 10;
+	resumeFromAttack = 2;
 	//set score
 	time = Label::create("Score: 0", "arial", 36);
 	time->setPosition(visibleSize.width / 2, visibleSize.height - 60);
@@ -298,6 +322,11 @@ void HelloWorld::InitialScene() {
 	validTowerNum = Label::create("Valid Tower: " + std::to_string(LIMITTOWERNUM), "arial", 20);
 	validTowerNum->setPosition(visibleSize.width / 5 * 4, visibleSize.height - 60);
 	this->addChild(validTowerNum, 120);
+
+	PlayerLevel = Label::create("Player Level: " + std::to_string(PLAYER_LEVEL), "arial", 20);
+	PlayerLevel->setPosition(visibleSize.width / 5 * 4, visibleSize.height - 100);
+	this->addChild(PlayerLevel, 120);
+
 	setText();
 
 	// 设置复活时间显示（不处于死亡状态不显示
@@ -315,9 +344,23 @@ void HelloWorld::InitialScene() {
 		origin.y + visibleSize.height / 2));
 	this->addChild(home, 3);
 
+	//设置技能列表
+	skill_icon[0] = Sprite::create("wind.png");
+	skill_icon[1] = Sprite::create("attackinc.png");
+	skill_icon[2] = Sprite::create("resume.png");
+	skill_icon[3] = Sprite::create("attract.png");
+	skill_icon[4] = Sprite::create("unknown.png");
+
+	for (int i = 0; i < 4; ++i) {
+		skill_icon[i]->setPosition(Vec2(250 + 62 * i, 40));
+		addChild(skill_icon[i], 120);
+		skill_icon[i]->setVisible(false);
+	}
+
 	
 	//设置玩家血条 需要更好的血条素材
 	Sprite* sp = Sprite::create("hp.png", CC_RECT_PIXELS_TO_POINTS(Rect(610, 362, 4, 16)));
+	sp->setColor(Color3B::BLUE); //区别于其他的血条
 	auto temppT = ProgressTimer::create(sp);
 	temppT->setScaleX(16);
 	temppT->setScaleY(0.5);
@@ -330,6 +373,8 @@ void HelloWorld::InitialScene() {
 	temppT->setTag(BloodBar);
 	player->addChild(temppT, 1);
 
+
+	//设置玩家的刚体
 	addChild(player, 10);
 
 
@@ -356,7 +401,7 @@ void HelloWorld::InitialScene() {
 
 //设置地图。 地图需要更换。
 void HelloWorld::setMap() {
-	TMXTiledMap * tmx = TMXTiledMap::create("map.tmx");
+	Sprite * tmx = Sprite::create("map.png");
 	tmx->setPosition(visibleSize.width / 2, visibleSize.height / 2);
 	tmx->setAnchorPoint(Vec2(0.5, 0.5));
 	tmx->setScale(Director::getInstance()->getContentScaleFactor());
@@ -431,13 +476,27 @@ void HelloWorld::SetProgressBar() {
 }
 
 
+bool HelloWorld::contactWithTower() {
+	auto tower = TowerFactory::getInstance()->tower;
+	bool flag = false;
+	for (auto i = tower.begin(); i != tower.end(); ++i) {
+		if ((*i)->getBoundingBox().containsPoint(player->getPosition()))
+			return true;
+	}
+	return false;
+}
+
 void HelloWorld::hitByMonster(float dt) {
+	//顺便检测player 与 tower 的碰撞情况。
+	if (contactWithTower() && player->getActionByTag(MOVE) != nullptr) {
+		player->stopActionByTag(MOVE);
+	}
 	auto fac = Factory::getInstance();
 	//也可用home boundedBox检测。
 	auto collider = fac->collider(home->getBoundingBox());
 	if (collider != nullptr) {
 		fac->removeMonster(collider);
-		auto progress = ProgressFromTo::create(0.5f, pT->getPercentage(), pT->getPercentage() - 10);
+		auto progress = ProgressFromTo::create(0.5f, pT->getPercentage(), pT->getPercentage() - attackOfPlayer);
 		pT->runAction(progress);
 	}
 	if (pT->getPercentage() <= 0) GameOver();
@@ -453,7 +512,7 @@ void HelloWorld::hitByMonster(float dt) {
 		if (collision != NULL) {
 			if (Factory::getInstance()->DecreaseHP(collision, false)) {
 				auto temppT = (ProgressTimer *)player->getChildByTag(BloodBar);
-				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + 2); //玩家回复。
+				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + resumeFromAttack); //玩家回复。
 				temppT->runAction(process);
 				/*
 				*/
@@ -499,20 +558,21 @@ void HelloWorld::GameOver() {
 	Factory::getInstance()->removeAllMonster();
 	TowerFactory::getInstance()->removeAllTower();
 	HelloWorld::currentScore = 0;
+	HelloWorld::Level_5_Skill_On = false;
 	auto label1 = Label::createWithTTF("防守失败2333", "fonts/STXINWEI.TTF", 60);
-	label1->setColor(Color3B(0, 0, 0));
+	//label1->setColor(Color3B(0, 0, 0));
 	label1->setPosition(visibleSize.width / 2, visibleSize.height / 2);
 	this->addChild(label1, 100);
 
 	auto label2 = Label::createWithTTF("重玩", "fonts/STXINWEI.TTF", 40);
-	label2->setColor(Color3B(0, 0, 0));
+	//label2->setColor(Color3B(0, 0, 0));
 	auto replayBtn = MenuItemLabel::create(label2, CC_CALLBACK_1(HelloWorld::replayCallback, this));
 	Menu* replay = Menu::create(replayBtn, NULL);
 	replay->setPosition(visibleSize.width / 2 - 80, visibleSize.height / 2 - 100);
 	this->addChild(replay, 100);
 
 	auto label3 = Label::createWithTTF("退出", "fonts/STXINWEI.TTF", 40);
-	label3->setColor(Color3B(0, 0, 0));
+	//label3->setColor(Color3B(0, 0, 0));
 	auto exitBtn = MenuItemLabel::create(label3, CC_CALLBACK_1(HelloWorld::exitCallback, this));
 	Menu* exit = Menu::create(exitBtn, NULL);
 	exit->setPosition(visibleSize.width / 2 + 90, visibleSize.height / 2 - 100);
@@ -606,11 +666,106 @@ void HelloWorld::setEvent() {
 void HelloWorld::onKeyPressed(EventKeyboard::KeyCode code, Event* event) {
 	if (code == EventKeyboard::KeyCode::KEY_J) Attack();
 	if (code == EventKeyboard::KeyCode::KEY_K) Jump();
-		pressTable[code] = true;
+	if (code == EventKeyboard::KeyCode::KEY_U) Level_2_Skill();
+	
+	if (code == EventKeyboard::KeyCode::KEY_I) Level_3_Skill();
+	if (code == EventKeyboard::KeyCode::KEY_O) Level_4_Skill();
+	if (code == EventKeyboard::KeyCode::KEY_P) Level_5_Skill();
+	
+	pressTable[code] = true;
 }
 
 void HelloWorld::onKeyReleased(EventKeyboard::KeyCode code, Event* event) {
 	player->stopActionByTag(CHANGING_POS);
 	player->stopActionByTag(MOVE);
 	pressTable[code] = false;
+}
+
+void HelloWorld::Level_2_Skill() {
+	if (!reviveTime->isVisible() && PLAYER_LEVEL >= 2 && skillColding[0] == 0) {
+		auto monster = Factory::getInstance()->monster;
+		
+		skillColding[0] = COLD_TIME_0;
+		//unschedule(schedule_selector(HelloWorld::moveMonster));
+		for (auto mons = monster.begin(); mons != monster.end(); ++mons) {
+			auto MoveBack = MoveBy::create(0.5, Vec2(100, 0));
+			(*mons)->runAction(MoveBack);
+		}
+	}
+	else {
+		return;
+	}
+
+}
+
+void HelloWorld::Level_3_Skill() {
+	if (!reviveTime->isVisible() && PLAYER_LEVEL >= 3 && skillColding[1] == 0) {
+		attackOfPlayer *= 2;
+		skillColding[1] = COLD_TIME_1;
+		ParticleFire * angry = ParticleFire::create();
+		angry->setPosition(0, 0);
+		angry->setAnchorPoint(Vec2(0.5, 0.5));
+		angry->setStartSize(10);
+		angry->setEndSize(0);
+		angry->setDuration(LEVEL_3_SKILL_TIME);
+		player->addChild(angry);
+		schedule(schedule_selector(HelloWorld::Level3Effect), 1.0f, LEVEL_3_SKILL_TIME, 0);
+	}
+}
+
+void HelloWorld::Level3Effect(float dt) {
+	static int t = 5;
+	t--;
+	if (t == 0) attackOfPlayer /= 2;
+}
+
+
+void HelloWorld::Level_4_Skill() {
+	if (!reviveTime->isVisible() && PLAYER_LEVEL >= 4 && skillColding[2] == 0) {
+		skillColding[2] = COLD_TIME_2;
+		resumeFromAttack += attackOfPlayer;
+		ParticleGalaxy *buff = ParticleGalaxy::create();
+		buff->setDuration(LEVEL_4_SKILL_TIME);
+		buff->setEmitterMode(ParticleSystem::Mode::RADIUS);
+		buff->setPosition(0, 0);
+		buff->setAnchorPoint(Vec2(0.5, 0.5));
+		buff->setStartRadius(20);
+		buff->setEndRadius(0);
+		player->addChild(buff);
+		unschedule(schedule_selector(HelloWorld::SlowHeal));
+		schedule(schedule_selector(HelloWorld::SlowHeal), 1.0f, CC_REPEAT_FOREVER, 0);
+		schedule(schedule_selector(HelloWorld::Level4Effect), 1.0f, LEVEL_4_SKILL_TIME, 0);
+	}
+}
+
+void HelloWorld::Level4Effect(float dt) {
+	static int t = 5;
+	static int incAmount = attackOfPlayer;
+	t--;
+	if (t == 0) {
+		unschedule(schedule_selector(HelloWorld::SlowHeal));
+		schedule(schedule_selector(HelloWorld::SlowHeal), 8.0f, CC_REPEAT_FOREVER, 0);
+		resumeFromAttack -= incAmount;
+	}
+	
+}
+
+void HelloWorld::Level_5_Skill() {
+	if (!reviveTime->isVisible() && PLAYER_LEVEL >= 5 && skillColding[3] == 0) {
+		HelloWorld::Level_5_Skill_On = !HelloWorld::Level_5_Skill_On;
+		skillColding[3] = COLD_TIME_3;
+	}
+}
+
+void HelloWorld::UpdateColdTime(float dt) {
+	for (int i = 0; i < 4; ++i) {
+		if (skillColding[i] > 0 || PLAYER_LEVEL < 2 + i || reviveTime->isVisible()) {
+			if (skillColding[i] > 0) 
+				skillColding[i] --;
+			skill_icon[i]->setVisible(false);
+		}
+		else {
+			skill_icon[i]->setVisible(true);
+		}
+	}
 }

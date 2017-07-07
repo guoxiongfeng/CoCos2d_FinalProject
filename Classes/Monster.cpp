@@ -3,7 +3,7 @@
 #include "HelloWorldScene.h"
 #define BloodBar -30000
 #define MonsterIsDecreasingHp -30001
-#define MONSTER -1
+#define MONSTER -2
 #define MonsterBaseHP 3
 USING_NS_CC;
 
@@ -27,7 +27,9 @@ void Factory::initSpriteFrame(){
 }
 
 Sprite* Factory::createMonster() {
-	Sprite* mons = Sprite::create("Monster.png", CC_RECT_PIXELS_TO_POINTS(Rect(364,0,42,42)));
+	int randomNum = RandomHelper::random_int(1, 17);
+	std::string s = "monster/" + std::to_string(randomNum) + ".png";
+	Sprite* mons = Sprite::create(s);
 	mons->setAnchorPoint(Vec2(0.5, 0.5));
 	mons->setName("monster");
 	
@@ -35,17 +37,15 @@ Sprite* Factory::createMonster() {
 	rigidbody->setGravityEnable(false);
 	rigidbody->setTag(MONSTER);
 	mons->addComponent(rigidbody);
-	rigidbody->setCategoryBitmask(0xFFFFFFFF);
-	rigidbody->setCollisionBitmask(0xFFFFFFFF);
-	rigidbody->setContactTestBitmask(0xFFFFFFFF);
+	rigidbody->setCategoryBitmask(0x0000FFFF);
+	rigidbody->setCollisionBitmask(0x0000FFFF);
+	rigidbody->setContactTestBitmask(0x0000FFFF);
 
 	//这是难度的重点。 这函数我随便写的
 	mons->setUserData(new MonsterInfo(MonsterBaseHP + HelloWorld::currentScore / 150, HelloWorld::currentScore / 150));
 
 	//设置血条
-	Sprite* sp0 = Sprite::create("hp.png", CC_RECT_PIXELS_TO_POINTS(Rect(0, 320, 420, 47)));
 	Sprite* sp = Sprite::create("hp.png", CC_RECT_PIXELS_TO_POINTS(Rect(610, 362, 4, 16)));
-
 	//使用hp条设置progressBar 血条需要更好看的素材
 	auto pT = ProgressTimer::create(sp);
 	pT->setScaleX(10);
@@ -57,6 +57,7 @@ Sprite* Factory::createMonster() {
 	pT->setPercentage(100);
 	pT->setPosition((Vec2((mons->getContentSize().width - 20) / 2  , mons->getContentSize().height / 1.0)));
 	pT->setTag(BloodBar);
+	pT->setColor(Color3B::YELLOW);
 	mons->addChild(pT, 1);
 
 	monster.pushBack(mons);
@@ -64,9 +65,10 @@ Sprite* Factory::createMonster() {
 }
 
 void Factory::removeMonster(Sprite* sp) {
-	Animation * anim = Animation::createWithSpriteFrames(monsterDead, 0.1f);
-	Animate * ani = Animate::create(anim);
-	Sequence *seq = Sequence::create(ani, CallFunc::create(CC_CALLBACK_0(Sprite::removeFromParent, sp)), NULL);
+	auto disappear = FadeOut::create(0.5);
+	//Animation * anim = Animation::createWithSpriteFrames(monsterDead, 0.1f);
+	//Animate * ani = Animate::create(anim);
+	Sequence *seq = Sequence::create(disappear, CallFunc::create(CC_CALLBACK_0(Sprite::removeFromParent, sp)), NULL);
 	sp->runAction(seq);
 	if (monster.find(sp) != monster.end()) {
 		monster.eraseObject(sp);
@@ -80,8 +82,13 @@ void Factory::moveMonster(Vec2 playerPos,float time){
 	for (auto it = monster.begin(); it != monster.end(); ++it) {
 		Vec2 MonsterPos = (*it)->getPosition();
 		//Vec2 direction = playerPos - MonsterPos;
-		Vec2 direction = Vec2(-1, 0);
+		Vec2 direction = Vec2(-1, 5 *  sin((*it)->getPosition().x));//正弦移动
+
+		if (HelloWorld::Level_5_Skill_On)
+			direction = playerPos - MonsterPos;
 		direction.normalize();
+		if (HelloWorld::Level_5_Skill_On)
+			direction = direction / 3; // 减速效果。
 		speed = ((const MonsterInfo * const)(*it)->getUserData())->speed;
 		//speed = HelloWorld::currentScore / 300.0 + 1;
 		(*it)->runAction(MoveBy::create(time, direction * speed));
