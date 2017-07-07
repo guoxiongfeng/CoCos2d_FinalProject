@@ -555,10 +555,8 @@ void HelloWorld::GameOver() {
 	unschedule(schedule_selector(HelloWorld::moveMonster));
 	unschedule(schedule_selector(HelloWorld::Reviving));
 	unschedule(schedule_selector(HelloWorld::SlowHeal));
-	/*
-	SimpleAudioEngine::getInstance()->stopBackgroundMusic("bgm.mp3");
-	SimpleAudioEngine::getInstance()->playEffect("gameover.mp3", false);
-	*/
+	this->getEventDispatcher()->removeAllEventListeners();
+
 	Factory::getInstance()->removeAllMonster();
 	TowerFactory::getInstance()->removeAllTower();
 	HelloWorld::currentScore = 0;
