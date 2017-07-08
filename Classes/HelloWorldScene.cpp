@@ -213,6 +213,7 @@ void HelloWorld::Reviving(float dt) {
 		//revive player
 		Revive(visibleSize / 2);
 		reviveTime->setVisible(false);
+		pT->setPercentage(100);
 		unschedule(schedule_selector(HelloWorld::Reviving));
 	}
 }
@@ -499,7 +500,7 @@ void HelloWorld::hitByMonster(float dt) {
 	auto collider = fac->collider(home->getBoundingBox());
 	if (collider != nullptr) {
 		fac->removeMonster(collider);
-		auto progress = ProgressFromTo::create(0.5f, pT->getPercentage(), pT->getPercentage() - attackOfPlayer);
+		auto progress = ProgressFromTo::create(0.5f, pT->getPercentage(), pT->getPercentage() - 10);
 		pT->runAction(progress);
 	}
 	if (pT->getPercentage() <= 0) GameOver();
@@ -515,7 +516,7 @@ void HelloWorld::hitByMonster(float dt) {
 		if (collision != NULL) {
 			if (Factory::getInstance()->DecreaseHP(collision, false)) {
 				auto temppT = (ProgressTimer *)player->getChildByTag(BloodBar);
-				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + resumeFromAttack); //玩家回复。
+				auto process = ProgressFromTo::create(0.5f, temppT->getPercentage(), temppT->getPercentage() + resumeFromAttack + attackOfPlayer / 5); //玩家回复。
 				temppT->runAction(process);
 				/*
 				*/
